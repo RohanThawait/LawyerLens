@@ -1,5 +1,7 @@
-streamlit 
-pypdf 
+streamlit  
 langchain 
 openai 
 faiss-cpu
+PyMuPDF
+langchain-google-genai
+langchain_huggingface
