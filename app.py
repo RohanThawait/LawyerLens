@@ -8,6 +8,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
+from langchain.prompts import PromptTemplate
+
 # We will add more imports here as we build
 
 # --- Function to extract text from PDF ---
@@ -70,26 +72,47 @@ def main():
         st.subheader("Your Documents")
         pdf_docs = st.file_uploader("Upload your PDF files and click 'Process'", accept_multiple_files=True)
         if st.button("Process"):
-            with st.spinner("Processing documents..."):
-                # 1. Get PDF Text
-                raw_text = get_pdf_text(pdf_docs)
-                
-                # 2. Get Text Chunks
-                text_chunks = get_text_chunks(raw_text)
-                
-                # 3. Create Vector Store with local embeddings
-                vector_store = get_vector_store(text_chunks)
-                st.success("Documents processed!")
+            if pdf_docs:
+                with st.spinner("Processing documents..."):
+                    # 1. Get PDF Text
+                    raw_text = get_pdf_text(pdf_docs)
+                    
+                    # 2. Get Text Chunks
+                    text_chunks = get_text_chunks(raw_text)
+                    
+                    # 3. Create Vector Store with local embeddings
+                    vector_store = get_vector_store(text_chunks)
+                    st.success("Documents processed!")
 
-                # 4. Create Conversation Chain
-                # This chain uses an LLM for chat and our vector_store for retrieval
-                llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=st.secrets["GOOGLE_API_KEY"])
-                memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
-                st.session_state.conversation = ConversationalRetrievalChain.from_llm(
-                    llm=llm,
-                    retriever=vector_store.as_retriever(),
-                    memory=memory
-                )
+                    # Define your custom prompt
+                    template = """
+                    You are an AI assistant named 'LawyerLens'. Your task is to answer questions strictly based on the provided legal document context.
+                    Do not use any outside knowledge.
+                    If the user asks a question that is not related to the provided context or is a general question, you must politely decline and say: 'I can only answer questions related to the provided legal documents.'
+                    ---
+                    Context: {context}
+                    Chat History: {chat_history}
+                    User Question: {question}
+                    Answer:
+                    """
+
+                    custom_prompt = PromptTemplate(
+                        input_variables=["context", "chat_history", "question"],
+                        template=template
+                    )
+                    # 4. Create Conversation Chain
+                    # This chain uses an LLM for chat and our vector_store for retrieval
+                    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=st.secrets["GOOGLE_API_KEY"])
+                    memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+                    st.session_state.conversation = ConversationalRetrievalChain.from_llm(
+                        llm=llm,
+                        retriever=vector_store.as_retriever(),
+                        memory=memory,
+                        combine_docs_chain_kwargs={"prompt": custom_prompt}
+                    )
+                    st.success("Knowledge base ready!")
+            else:
+                st.warning("Please upload at least one PDF file before processing.")
     
     user_question = st.text_input("Ask a question about your documents:")
     if user_question and st.session_state.conversation:
@@ -97,11 +120,12 @@ def main():
         st.session_state.chat_history = response['chat_history']
         
         # Display conversation
-        for i, message in enumerate(st.session_state.chat_history):
-            if i % 2 == 0:
-                st.write(f"**You:** {message.content}")
-            else:
-                st.write(f"**LawyerLens:** {message.content}")
+        # Display conversation using chat bubbles
+        if st.session_state.chat_history:
+            for message in st.session_state.chat_history:
+                role = "user" if message.type == 'human' else "assistant"
+                with st.chat_message(role):
+                    st.markdown(message.content)
 
 # To run the app
 if __name__ == '__main__':
