@@ -1,21 +1,22 @@
-# build_knowledge_base.py
-
 import os
-import chromadb
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-import pymupdf 
+import pymupdf
 from typing import List
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
 
-# --- Reusable Functions from our main app ---
+EMBEDDING_MODEL_NAME = "hkunlp/instructor-large"
+PERSIST_DIRECTORY = "./chroma_db"
+SOURCE_DIRECTORY = "./legal_docs"
+
 def get_pdf_text(pdf_paths: List[str]) -> str:
     """Extracts text from a list of PDF file paths."""
     text = ""
     for path in pdf_paths:
         try:
             with pymupdf.open(path) as doc:
-                for page in doc:
-                    text += page.get_text() or ""
+                text += "".join(page.get_text() for page in doc)
         except Exception as e:
             print(f"Error reading {path}: {e}")
     return text
@@ -27,57 +28,41 @@ def get_text_chunks(raw_text: str) -> List[str]:
         chunk_overlap=200,
         length_function=len
     )
-    chunks = text_splitter.split_text(raw_text)
-    return chunks
+    return text_splitter.split_text(raw_text)
 
-# --- Main Script Logic ---
 def main():
     print("Building knowledge base...")
 
-    # Define paths
-    pdf_folder_path = "./legal_docs"
-    chroma_db_path = "./chroma_db"
-
-    # 1. Get list of PDF file paths
-    pdf_paths = [os.path.join(pdf_folder_path, f) for f in os.listdir(pdf_folder_path) if f.endswith(".pdf")]
-    
+    # 1. Load source documents
+    pdf_paths = [os.path.join(SOURCE_DIRECTORY, f) for f in os.listdir(SOURCE_DIRECTORY) if f.endswith(".pdf")]
     if not pdf_paths:
-        print("No PDF documents found in the 'legal_docs' folder.")
+        print(f"No PDF documents found in the '{SOURCE_DIRECTORY}' folder.")
         return
+    print(f"Found {len(pdf_paths)} documents to process.")
 
-    # 2. Extract and Chunk Text
+    # 2. Extract and chunk text
     raw_text = get_pdf_text(pdf_paths)
     chunks = get_text_chunks(raw_text)
+    documents = [Document(page_content=chunk) for chunk in chunks]
+    print(f"Split text into {len(documents)} chunks.")
     
-    # 3. Initialize Embeddings and ChromaDB
-    # Using a local, open-source model for embeddings
-    embeddings = HuggingFaceEmbeddings(model_name="hkunlp/instructor-large")
+    # 3. Initialize the embedding model
+    print(f"Loading embedding model: {EMBEDDING_MODEL_NAME}")
+    embeddings = HuggingFaceEmbeddings(
+        model_name=EMBEDDING_MODEL_NAME,
+        model_kwargs={'device': 'cpu'}
+    )
     
-    # This creates a persistent database in the specified directory
-    client = chromadb.PersistentClient(path=chroma_db_path)
-    
-    # Create or get the collection (like a table in a regular database)
-    collection = client.get_or_create_collection(name="indian_law")
-    
-    # 4. Add documents to the collection
-    # ChromaDB handles the embedding process automatically here.
-    # We add the chunks in batches to be efficient.
-    batch_size = 100
-    for i in range(0, len(chunks), batch_size):
-        batch_chunks = chunks[i:i+batch_size]
-        
-        # Create unique IDs for each chunk in the batch
-        start_id = collection.count()
-        ids = [f"chunk_{j}" for j in range(start_id, start_id + len(batch_chunks))]
-        
-        collection.add(
-            documents=batch_chunks,
-            ids=ids
-        )
-        print(f"Added batch {i//batch_size + 1} to the collection.")
+    # 4. Create and persist the Chroma vector store
+    # This single command handles embedding and storing the documents.
+    print(f"Creating and persisting vector store at: {PERSIST_DIRECTORY}")
+    Chroma.from_documents(
+        documents=documents,
+        embedding=embeddings,
+        persist_directory=PERSIST_DIRECTORY
+    )
 
-    print("\n✅ Knowledge base built successfully!")
-    print(f"Total documents in collection: {collection.count()}")
+    print("\n Knowledge base built successfully!")
 
 if __name__ == '__main__':
     main()
