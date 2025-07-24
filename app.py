@@ -6,7 +6,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
-from langchain_chroma import Chroma
 from langchain.chains import LLMChain
 from langchain_pinecone import Pinecone
 import os
