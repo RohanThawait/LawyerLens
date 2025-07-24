@@ -1,11 +1,10 @@
 # ⚖️ LawyerLens: AI-Powered Legal Document Assistant
 
-**[Live App Demo Link]([YOUR-LIVE-APP-URL-HERE])**
+**[Live App Demo Link]([https://huggingface.co/spaces/thawait/LawyerLens])**
 
 LawyerLens is an advanced AI assistant designed to move beyond simple "chat with your PDF" functionality. Instead of just retrieving information, it validates clauses from uploaded legal documents (like rental agreements) against a curated, authoritative knowledge base of Indian law. This provides users with a powerful tool to check if their documents are aligned with legal statutes, offering a level of analysis that generic tools cannot.
 
-![LawyerLens Demo GIF]([YOUR-GIF-HERE.gif])
-*(Hint: Use a tool like ScreenToGif or Kap to record a short GIF of your app in action and place it here.)*
+![LawyerLens Demo GIF]([c:\Users\Rohan\OneDrive\Desktop\Animation.gif])
 
 ---
 
