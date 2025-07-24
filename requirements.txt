@@ -7,4 +7,4 @@ langchain-google-genai
 langchain_huggingface
 langchain_community
 pinecone
-lanchain-pinecone
+langchain-pinecone
