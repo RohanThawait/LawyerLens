@@ -8,3 +8,4 @@ langchain_huggingface
 langchain_community
 pinecone
 langchain-pinecone
+sentence-transformers
