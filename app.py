@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pymupdf
 from typing import List
@@ -9,9 +8,10 @@ from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_chroma import Chroma
 from langchain.chains import LLMChain
+from langchain_pinecone import Pinecone
+import os
 
 EMBEDDING_MODEL_NAME = "hkunlp/instructor-large"
-PERSIST_DIRECTORY = "./chroma_db"
 LLM_MODEL_NAME = "gemini-1.5-flash"
 
 # Cache the embedding model loading
@@ -59,6 +59,8 @@ def main():
     # Load models and vector store using cached functions
     embeddings = load_embeddings()
     llm = load_llm()
+    os.environ["PINECONE_API_KEY"] = st.secrets["PINECONE_API_KEY"]
+    os.environ["PINECONE_ENVIRONMENT"] = st.secrets["PINECONE_ENVIRONMENT"]
 
     # Initialize session state
     if "messages" not in st.session_state:
@@ -98,12 +100,13 @@ def main():
                 st.stop()
 
             with st.spinner("Analyzing..."):
-                # 1. Connect to the permanent Legal Knowledge Base (ChromaDB)
-                vector_store_law = Chroma(
-                    persist_directory=PERSIST_DIRECTORY,
-                    embedding_function=embeddings
+                # 1. Connect to the Legal Knowledge Base in Pinecone
+                embeddings = load_embeddings()
+                vector_store_law = Pinecone.from_existing_index(
+                    index_name="lawyerlens-kb",
+                    embedding=embeddings,
                 )
-                retriever_indian_law = vector_store_law.as_retriever()
+                retriever_indian_law = vector_store_law.as_retriever(search_kwargs={'k': 5})
 
                 # 2. Retrieve context from BOTH sources
                 docs_from_law = retriever_indian_law.get_relevant_documents(user_prompt)
