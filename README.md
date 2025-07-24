@@ -4,7 +4,7 @@
 
 LawyerLens is an advanced AI assistant designed to move beyond simple "chat with your PDF" functionality. Instead of just retrieving information, it validates clauses from uploaded legal documents (like rental agreements) against a curated, authoritative knowledge base of Indian law. This provides users with a powerful tool to check if their documents are aligned with legal statutes, offering a level of analysis that generic tools cannot.
 
-![LawyerLens Demo GIF](https://github.com/RohanThawait/LawyerLens/blob/main/demo/Animation.gif)
+![LawyerLens Demo GIF](https://github.com/RohanThawait/LawyerLens/raw/main/demo/Animation.gif)
 
 ---
 
@@ -12,7 +12,7 @@ LawyerLens is an advanced AI assistant designed to move beyond simple "chat with
 
 * **Dual-Retrieval RAG Architecture:** For every user query, LawyerLens retrieves context from two sources simultaneously: the user's uploaded document and the permanent legal knowledge base.
 * **Legal Validation:** The core feature. The AI is instructed to compare the two contexts and identify if the document's clause conflicts with, aligns with, or is silent on the matter according to the law.
-* **Persistent Knowledge Base:** Built with **ChromaDB** to store and efficiently search through a curated library of Indian legal texts.
+* **Persistent Knowledge Base:** Built with **Pinecone** to store and efficiently search through a curated library of Indian legal texts.
 * **Optimized & Local:** Uses powerful, open-source **Hugging Face** models for embeddings that run locally, ensuring privacy and cost-effectiveness. The final reasoning step is powered by the **Google Gemini API**.
 * **Conversational Memory:** Remembers the context of the conversation for follow-up questions within a session.
 
@@ -26,14 +26,14 @@ The system uses a comparative RAG pipeline to deliver its analysis:
 User Query -------------------------------------->+
                                                   |
 +-----------------------------+     +-------------------------------+     +--------------------+
-|   Temporary Vector Store    |     |   Persistent Knowledge Base   |     |      Google        |
-| (Uploaded Doc - FAISS)      |     |     (Indian Law - ChromaDB)   |     |      Gemini        |
+|   Temporary Vector Store    |     |   Cloud Vector Database       |     |      Google        |
+| (Uploaded Doc - FAISS)      |     |     (Indian Law - Pinecone)   |     |      Gemini        |
 +-----------------------------+     +-------------------------------+     +--------------------+
             |                                     |                               ^
-            | (Retrieval 1)                       | (Retrieval 2)                 |
+            | (Retrieval 1)                       | (Retrieval 2)                 | (LLM Chain)
             v                                     v                               |
 +-----------------------------+     +-------------------------------+             |
-|   Context from Uploaded Doc |     |  Context from Indian Law      |-------------+ (Stuff Chain)
+|   Context from Uploaded Doc |     |  Context from Indian Law      |-------------+
 +-----------------------------+     +-------------------------------+
 ```
 
@@ -44,7 +44,7 @@ User Query -------------------------------------->+
 * **Application Framework:** Streamlit
 * **LLM & Orchestration:** LangChain, Google Gemini API
 * **Embeddings:** Hugging Face Sentence Transformers (`hkunlp/instructor-large`)
-* **Vector Databases:** ChromaDB (for persistent knowledge base), FAISS (for temporary session documents)
+* **Vector Databases:** Pinecone (for persistent knowledge base), FAISS (for temporary session documents)
 * **Core Libraries:** PyMuPDF
 * **Language:** Python
 
@@ -71,6 +71,8 @@ pip install -r requirements.txt
 Create a file at `.streamlit/secrets.toml` and add your Google API key:
 ```toml
 GOOGLE_API_KEY="AI..."
+PINECONE_API_KEY = "..."
+PINECONE_ENVIRONMENT = "..."
 ```
 
 **4. Build the Knowledge Base:**
@@ -78,7 +80,7 @@ Place your source legal PDFs (e.g., "The Indian Contract Act, 1872.pdf") into th
 ```bash
 python build_knowledge_base.py
 ```
-This will create a local `chroma_db` folder containing your legal knowledge base.
+This will populate your cloud-hosted Pinecone index with the embedded legal documents.
 
 **5. Run the Streamlit App:**
 ```bash
