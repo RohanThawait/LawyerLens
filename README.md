@@ -44,7 +44,7 @@ User Query -------------------------------------->+
 * **Application Framework:** Streamlit
 * **LLM & Orchestration:** LangChain, Google Gemini API
 * **Embeddings:** Hugging Face Sentence Transformers (`hkunlp/instructor-large`)
-* **Vector Databases:** Pinecone (for persistent knowledge base), FAISS (for temporary session documents)
+* **Vector Databases:** Pinecone, FAISS
 * **Core Libraries:** PyMuPDF
 * **Language:** Python
 
